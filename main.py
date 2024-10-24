@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split, KFold
 from sklearn import svm as support_vector_machine
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
+import itertools
 
 
 class my_svm():
@@ -105,74 +106,59 @@ def feature_experiment():
     print("Feature Set: TSS Scores")
     k = 10
 
-    combinations =  [
-        [0],
-        [1],
-        [2],
-        [3],
-        [0, 1],
-        [0, 2],
-        [0, 3],
-        [1, 2],
-        [1, 3],
-        [2, 3],
-        [0, 1, 2],
-        [0, 1, 3],
-        [0, 2, 3],
-        [1, 2, 3],
-        [0, 1, 2, 3]
-    ]
+    indices = range(len(allSets))
 
-    #Uses all index combinations of features sets and indexes allSets for combination
-    for combo in combinations:
-        feature_set = allSets[combo]
-        svm = my_svm(X, Y, feature_set)
-        X_, Y_ = svm.preprocess()
-        svc = support_vector_machine.SVC()
-        kf, tss = svm.cross_validation(svc, X_, Y_, k)
-        # print(f'{feature_set}: {np.mean(tss)}')
-        print(f'{feature_set}: {tss}')
-        bestFold = float('-inf')
-        cm = None
-        tss = []
-        
-        # Performs K fold cross validation, calculates tss, and finds best fold to create confusion matrix for
-        for train_index, test_index in kf.split(X_):
-            # Indexes dataset for folds
-            X_train, X_test = X_[train_index], X_[test_index]
-            Y_train, Y_test = Y_[train_index], Y_[test_index]
+    for r in range(1, len(indices) + 1):
+        for combo in itertools.combinations(indices, r):
+            combo = list(combo)
+            feature_set = allSets[combo]
+            svm = my_svm(X, Y, feature_set)
+            X_, Y_ = svm.preprocess()
+            svc = support_vector_machine.SVC()
+            kf, tss = svm.cross_validation(svc, X_, Y_, k)
+            # print(f'{feature_set}: {np.mean(tss)}')
+            print(f'{feature_set}: {tss}')
+            bestFold = float('-inf')
+            cm = None
+            tss = []
+            
+            # Performs K fold cross validation, calculates tss, and finds best fold to create confusion matrix for
+            for train_index, test_index in kf.split(X_):
+                # Indexes dataset for folds
+                X_train, X_test = X_[train_index], X_[test_index]
+                Y_train, Y_test = Y_[train_index], Y_[test_index]
 
-            svc.fit(X_train, Y_train)
-            # Gets confusion matrix and score for each fold
-            confusion_matrix, score = svm.tss(svc, X_test, Y_test)
-            tss.append(score)
+                svc.fit(X_train, Y_train)
+                # Gets confusion matrix and score for each fold
+                confusion_matrix, score = svm.tss(svc, X_test, Y_test)
+                tss.append(score)
 
-            # Stores best fold and corresponding confusion matrix
-            if score > bestFold:
-                bestFold = score
-                cm = confusion_matrix
-        
-        #Finds best feature set combination using highest mean tss score
-        if np.mean(tss) > highest_tss:
-            highest_tss = np.mean(tss)
-            best_feature_set = feature_set
-        
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 8))
+                # Stores best fold and corresponding confusion matrix
+                if score > bestFold:
+                    bestFold = score
+                    cm = confusion_matrix
+            
+            #Finds best feature set combination using highest mean tss score
+            if np.mean(tss) > highest_tss:
+                highest_tss = np.mean(tss)
+                best_feature_set = feature_set
+            
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 8))
 
-        #Renders confusion matrix
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-        disp.plot(ax=ax1)
-        ax1.set_title(f'Feature Set: {feature_set}')
+            #Renders confusion matrix
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+            disp.plot(ax=ax1)
+            ax1.set_title(f'Feature Set: {feature_set}')
 
-        #Renders TSS scores
-        ax2.plot(np.linspace(1, k, num=k), tss, color='r', label={f'Avg TSS Score: {np.mean(tss)}'})
-        ax2.set_xlabel("K-fold")
-        ax2.set_ylabel("TSS score")
-        ax2.set_title(f'TSS-scores for Feature Set: {feature_set}')
+            #Renders TSS scores
+            ax2.plot(np.linspace(1, k, num=k), tss, color='r', label={f'Avg TSS Score: {np.mean(tss)}'})
+            ax2.set_xlabel("K-fold")
+            ax2.set_ylabel("TSS score")
+            ax2.set_title(f'TSS-scores for Feature Set: {feature_set}')
 
-        plt.tight_layout()
-        plt.legend()
-        plt.show()
+            plt.tight_layout()
+            plt.legend()
+            plt.show()
 
     print(f'Best feature set combination based off average TSS score: {best_feature_set}')
 
